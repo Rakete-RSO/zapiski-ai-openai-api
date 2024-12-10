@@ -1,11 +1,18 @@
+import enum
 import uuid
-from typing import Optional
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import DateTime, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
 
 from .database import Base
+
+
+class SubscriptionTier(enum.Enum):
+    Basic = "Basic"
+    Pro = "Pro"
+    Premium = "Premium"
 
 
 class User(Base):
@@ -22,6 +29,10 @@ class User(Base):
     username: Mapped[str] = mapped_column(unique=True, index=True)
     email: Mapped[str] = mapped_column(unique=True, index=True)
     password: Mapped[str] = mapped_column()
+    subscription_tier: Mapped[str] = mapped_column(
+        Enum(SubscriptionTier), default=SubscriptionTier.Basic
+    )
+    subscribed_date: Mapped[DateTime] = mapped_column(DateTime, default=func.now())
 
     chats: Mapped[list["Chat"]] = relationship("Chat", back_populates="user")
 
