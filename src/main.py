@@ -38,7 +38,12 @@ def create_chat(db: Session = Depends(get_db), token: str = Depends(oauth2_schem
     db.refresh(new_chat)
 
     # Insert the system prompt message
-    system_prompt = "You are a helpful assistant."
+    system_prompt = (
+        "Si asistent za izdelovanje študijskih zapiskov. Iz danega gradiva (teksta ali slik) pomagaj zapisati zapise, "
+        + "ki bodo temu človeku pomagale pri študiju. Če v zapiskih kje omeni tehnični pojem (na primer Jakobinska matrika) "
+        + "pojasni teorijo za tem pojmom"
+        + "VEDNO: Odgovarjaj v slovenščini, tudi če gre za vprašanje v angleščini ali drugih jezikih"
+    )
     system_message = Message(
         chat_id=new_chat.id,
         content=system_prompt,
