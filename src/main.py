@@ -81,11 +81,12 @@ def create_message(
     if not chat:
         return {"msg": "Chat not found"}
 
-    filetype = (file.filename or "").split(".")[-1]
-    base64_image = get_image_base64(file)
     formatted_base64_image = ""
-    if base64_image:
-        formatted_base64_image = format_base64_image(base64_image, filetype)
+    if file:
+        filetype = (file.filename or "").split(".")[-1]
+        base64_image = get_image_base64(file)
+        if base64_image:
+            formatted_base64_image = format_base64_image(base64_image, filetype)
     # Get the system message from the database
     previous_messages = db.query(Message).filter(Message.chat_id == chat_id).all()
     if not previous_messages:
