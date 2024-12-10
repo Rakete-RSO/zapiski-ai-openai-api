@@ -65,7 +65,6 @@ def create_message(
     payload = verify_access_token(token)
     if not payload:
         return {"msg": "Invalid token"}
-    print(payload)
     user_id = payload["sub"]
     if not user_id:
         return {"msg": "Invalid token payload"}
@@ -89,7 +88,6 @@ def create_message(
     openai_messages = build_openai_input(
         previous_messages, message, formatted_base64_image
     )
-    print("openai_messages", openai_messages)
     assistant_message = get_completion(openai_messages)
     user_message_db = Message(
         chat_id=chat_id,
