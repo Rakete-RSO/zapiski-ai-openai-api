@@ -32,7 +32,7 @@ def create_chat(db: Session = Depends(get_db), token: str = Depends(oauth2_schem
     if not payload:
         return {"msg": "Invalid token"}
     user_id = payload["sub"]
-    new_chat = Chat(user_id=user_id, created_at=datetime.now())
+    new_chat = Chat(user_id=user_id, created_at=datetime.now(), name="")
     db.add(new_chat)
     db.commit()
     db.refresh(new_chat)
@@ -91,6 +91,29 @@ def create_message(
     previous_messages = db.query(Message).filter(Message.chat_id == chat_id).all()
     if not previous_messages:
         return {"msg": "No messages found, expected at least system message"}
+
+    print("found previous messages")
+
+    # check if we should update the name of the chat
+    if not chat.name:
+        print("no name")
+        previous_user_messages = (
+            db.query(Message)
+            .filter(Message.chat_id == chat_id, Message.role == "user")
+            .first()
+        )
+        if not previous_user_messages:
+            print("no user messages -> updating name")
+            # take the first 10 characters of the message
+            if len(message) < 10:
+                chat.name = message
+            else:
+                chat.name = message[:10]
+            # not update the db
+            db.commit()
+            db.refresh(chat)
+
+    print("building input")
     openai_messages = build_openai_input(
         previous_messages, message, formatted_base64_image
     )
