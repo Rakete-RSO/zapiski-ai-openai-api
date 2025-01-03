@@ -26,38 +26,6 @@ app = FastAPI(lifespan=lifespan)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
-@app.post("/chat")
-def create_chat(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    payload = verify_access_token(token)
-    if not payload:
-        return {"msg": "Invalid token"}
-    user_id = payload["sub"]
-    new_chat = Chat(user_id=user_id, created_at=datetime.now(), name="")
-    db.add(new_chat)
-    db.commit()
-    db.refresh(new_chat)
-
-    # Insert the system prompt message
-    system_prompt = (
-        "Si asistent za izdelovanje študijskih zapiskov. Iz danega gradiva (teksta ali slik) pomagaj zapisati zapise, "
-        + "ki bodo temu človeku pomagale pri študiju. Če v zapiskih kje omeni tehnični pojem (na primer Jakobinska matrika) "
-        + "pojasni teorijo za tem pojmom"
-        + "VEDNO: Odgovarjaj v slovenščini, tudi če gre za vprašanje v angleščini ali drugih jezikih"
-    )
-    system_message = Message(
-        chat_id=new_chat.id,
-        content=system_prompt,
-        role="system",
-        visible=False,
-        created_at=datetime.now(),
-    )
-    db.add(system_message)
-    db.commit()
-    db.refresh(system_message)
-
-    return {"chat_id": new_chat.id}
-
-
 @app.post("/chat/messages")
 def create_message(
     chat_id: UUID = Form(...),
@@ -92,18 +60,14 @@ def create_message(
     if not previous_messages:
         return {"msg": "No messages found, expected at least system message"}
 
-    print("found previous messages")
-
     # check if we should update the name of the chat
     if not chat.name:
-        print("no name")
         previous_user_messages = (
             db.query(Message)
             .filter(Message.chat_id == chat_id, Message.role == "user")
             .first()
         )
         if not previous_user_messages:
-            print("no user messages -> updating name")
             # take the first 10 characters of the message
             if len(message) < 10:
                 chat.name = message
@@ -113,7 +77,6 @@ def create_message(
             db.commit()
             db.refresh(chat)
 
-    print("building input")
     openai_messages = build_openai_input(
         previous_messages, message, formatted_base64_image
     )
