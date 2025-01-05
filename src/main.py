@@ -61,6 +61,10 @@ def create_message(
     if not previous_messages:
         return {"msg": "No messages found, expected at least system message"}
 
+    openai_messages = build_openai_input(
+        previous_messages, message, formatted_base64_image
+    )
+    assistant_message = get_completion(openai_messages)
     # check if we should update the name of the chat
     if not chat.name:
         previous_user_messages = (
@@ -69,11 +73,14 @@ def create_message(
             .first()
         )
         if not previous_user_messages:
+            chat_name_msg = message
+            if not chat_name_msg:
+                chat_name_msg = assistant_message
             # take the first 30 characters of the message
-            if len(message) < 30:
-                chat.name = message
+            if len(chat_name_msg) < 30:
+                chat.name = chat_name_msg
             else:
-                chat.name = message[:30]
+                chat.name = chat_name_msg[:30]
             # not update the db
             db.commit()
             db.refresh(chat)
@@ -83,12 +90,7 @@ def create_message(
                 "name": chat.name,
                 "user_id": str(chat.user_id),
             }
-            result = meilisearch_index_chats.add_documents([meili_document])
-
-    openai_messages = build_openai_input(
-        previous_messages, message, formatted_base64_image
-    )
-    assistant_message = get_completion(openai_messages)
+            meilisearch_index_chats.add_documents([meili_document])
     user_message_db = Message(
         chat_id=chat_id,
         content=message,
