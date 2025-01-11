@@ -8,6 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from .auth import verify_access_token
+from .config import meilisearch_index_chats
 from .database import create_tables, get_db
 from .models import Chat, Message
 from .openai_service import get_completion
@@ -60,6 +61,10 @@ def create_message(
     if not previous_messages:
         return {"msg": "No messages found, expected at least system message"}
 
+    openai_messages = build_openai_input(
+        previous_messages, message, formatted_base64_image
+    )
+    assistant_message = get_completion(openai_messages)
     # check if we should update the name of the chat
     if not chat.name:
         previous_user_messages = (
@@ -68,19 +73,24 @@ def create_message(
             .first()
         )
         if not previous_user_messages:
-            # take the first 10 characters of the message
-            if len(message) < 10:
-                chat.name = message
+            chat_name_msg = message
+            if not chat_name_msg:
+                chat_name_msg = assistant_message
+            # take the first 30 characters of the message
+            if len(chat_name_msg) < 30:
+                chat.name = chat_name_msg
             else:
-                chat.name = message[:10]
+                chat.name = chat_name_msg[:30]
             # not update the db
             db.commit()
             db.refresh(chat)
 
-    openai_messages = build_openai_input(
-        previous_messages, message, formatted_base64_image
-    )
-    assistant_message = get_completion(openai_messages)
+            meili_document = {
+                "id": str(chat.id),
+                "name": chat.name,
+                "user_id": str(chat.user_id),
+            }
+            meilisearch_index_chats.add_documents([meili_document])
     user_message_db = Message(
         chat_id=chat_id,
         content=message,
