@@ -115,3 +115,9 @@ def create_message(
     db.refresh(assistant_message_db)
 
     return {"message_id": user_message_db.id, "content": assistant_message_db.content}
+
+
+@app.get("/health-check")
+def health_check():
+    # return status 200
+    return {"status": "ok"}

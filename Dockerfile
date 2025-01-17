@@ -1,6 +1,12 @@
 # Use the official Python image as a base
 FROM python:3.12-slim
 
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the current directory contents into the container at /app
+COPY . /app
+
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
@@ -8,23 +14,12 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
  \
-    # Set the working directory inside the container
-WORKDIR /app
-
-# Install Poetry
-RUN pip install poetry
-
-# Copy only the Poetry files first to leverage Docker's caching
-COPY poetry.lock pyproject.toml /app/
-
-# Install dependencies using Poetry (without virtualenvs, as we are in a container)
-RUN poetry config virtualenvs.create false && poetry install --only main
-
-# Copy the rest of the application files
-COPY . /app
-
-# Copy .env file into the container (optional: or load it dynamically)
-RUN cp .example.env .env
+ 
+# Install dependencies
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir poetry
+RUN poetry config virtualenvs.create false
+RUN poetry install --no-interaction --no-ansi --no-root
 
 # Expose the port for the FastAPI server
 EXPOSE 8000
