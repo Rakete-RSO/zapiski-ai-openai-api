@@ -13,7 +13,8 @@ from .database import create_tables, get_db
 from .models import Chat, Message
 from .openai_service import get_completion
 from .util import build_openai_input, format_base64_image, get_image_base64
-
+from strawberry.fastapi import GraphQLRouter
+from .graphql_schema import schema
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -25,7 +26,8 @@ async def lifespan(_: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
+graphql_app = GraphQLRouter(schema)
+app.include_router(graphql_app, prefix="/graphql")
 
 @app.post("/chat/messages")
 def create_message(
